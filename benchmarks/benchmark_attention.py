@@ -2,7 +2,6 @@ import argparse
 import json
 import os
 import platform
-import resource
 import subprocess
 import sys
 import time
@@ -31,10 +30,15 @@ def hardware_string():
 
 
 def process_peak_memory_mb():
-    value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    if sys.platform == 'darwin':
-        return value / (1024 * 1024)
-    return value / 1024
+    """Return peak process memory in MB.
+
+    Windows does not provide the Unix `resource` module, so use
+    psutil on Windows and Unix-like systems.
+    """
+    import psutil
+
+    process = psutil.Process(os.getpid())
+    return process.memory_info().rss / (1024 * 1024)
 
 
 def build_inputs(n, heads, dim, device, dtype):
