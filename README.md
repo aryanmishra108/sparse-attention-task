@@ -2,8 +2,6 @@
 
 This repo is my implementation for Task 1 of the Postman AI/ML recruitment task.
 
-The main idea is simple: start from a small, boring implementation of normal attention, make the masking rules explicit, and only then remove the unnecessary score computation. I kept the code fairly direct because the point of the task is to understand where the savings actually come from.
-
 ## What is included
 
 - Manual dense scaled dot-product attention (`attention/dense.py`)
@@ -30,7 +28,7 @@ QK^T / sqrt(d)
 
 It does not use `torch.nn.functional.scaled_dot_product_attention`.
 
-For sparse correctness, the oracle uses the **same sparse mask** with the manual dense implementation. A sparse model should not be expected to produce the same output as unrestricted dense attention, because it is intentionally seeing fewer keys. What we are checking is whether the sparse implementation faithfully computes the attention implied by its pattern.
+For sparse correctness, the oracle uses the **same sparse mask** with the manual dense implementation. A sparse model should not be expected to produce the same output as unrestricted dense attention, because it is intentionally seeing fewer keys.
 
 ## Install
 
@@ -118,9 +116,6 @@ Plot the comparison with:
 python gpt/evaluate_quality.py results/gpt/quality_results.json
 ```
 
-### Suggested Colab run
-
-A free T4 is a much better place to run the final TinyShakespeare experiment. The exact command above is intentionally simple so the comparison can be reproduced without editing the model code.
 
 ## NaN handling
 
