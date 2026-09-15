@@ -75,27 +75,39 @@ The block-sparse pattern tries to recover some of this connectivity. Local block
 
 The extra structure also has a cost. The block-sparse benchmark was consistently heavier than the simple sliding window because it retains more connections and has more indexing/bookkeeping work.
 
-## 5. TinyShakespeare quality experiment
+## 5. Results
 
-I used the included two-layer character-level GPT on TinyShakespeare and evaluated the same model configuration with dense, sliding-window, and block-sparse attention. The runs used the same dataset and training setup, with the attention pattern changed between evaluations.
+### Attention benchmark
 
-The collected runs produced the following final validation losses at step 1999:
+Benchmarked sequence lengths 512, 1024, 2048, 4096, and 8192.
 
-| Attention pattern | Run 1 | Run 2 | Run 3 | Mean |
-|---|---:|---:|---:|---:|
-| Dense | 1.6475 | 1.6455 | 1.6549 | **1.6493** |
-| Sliding-window | 1.6044 | 1.6159 | 1.6171 | **1.6125** |
-| Block-sparse | 1.6585 | 1.6545 | 1.6506 | **1.6545** |
+At N=8192:
+
+| Pattern | Time | Peak memory |
+|---|---:|---:|
+| Dense | 1.0093 s | 2865.2 MB |
+| Sliding-window | 0.3366 s | 1080.0 MB |
+| Block-sparse | 0.6827 s | 1405.2 MB |
+
+### TinyShakespeare
+
+Final validation loss at step 1999:
+
+| Pattern | Validation loss |
+|---|---:|
+| Dense | 1.6475 |
+| Sliding-window | 1.6044 |
+| Block-sparse | 1.6585 |
+
 
 The exact values came from the `quality_results.json` files produced by the three runs. There is a useful consistency check here: the same ordering appears in all three runs. Sliding-window has the lowest validation loss, block-sparse is very close to dense, and dense is between them in two of the three runs.
 
 I do not interpret the lower sliding-window loss as proof that sparse attention is inherently better than dense attention. This is a small character-level model, with only two Transformer layers and a fixed training budget. A more restrictive attention pattern can sometimes act like a useful inductive bias or simply change optimization enough to move the measured loss. The result is best read as evidence that the sparse patterns did **not** cause a quality collapse in this experiment.
 
-The training-time numbers show a different tradeoff from the standalone attention benchmark. In the GPT implementation, the sparse variants include additional indexing/gather overhead, so end-to-end training was not automatically faster. This is an important distinction: reducing the number of logical attention connections is not the same as having a fully optimized sparse GPU kernel.
-
+The training-time numbers show a different tradeoff from the standalone attention benchmark. In the GPT implementation, the sparse variants include additional indexing/gather overhead, so end-to-end training was not automatically faster.
 ## 6. Takeaways
 
-The main lesson is that sparsity helps only when the implementation actually avoids the work for the missing connections. Applying a sparse mask to a dense `N x N` score matrix preserves the quadratic cost, even if most entries are `-inf`.
+Sparsity helps only when the implementation actually avoids the work for the missing connections. Applying a sparse mask to a dense `N x N` score matrix preserves the quadratic cost, even if most entries are `-inf`.
 
 Sliding-window attention gives the largest savings and the simplest pattern, but it has the weakest direct access to long-range information. Block-sparse attention gives some of that connectivity back through global and random links, at the cost of more computation and more complicated indexing.
 
@@ -104,5 +116,3 @@ On the 8192-token CPU benchmark, sliding-window attention was about 3x faster an
 ## 7. Limitations
 
 There are several limitations to this experiment. The benchmark is a local CPU measurement rather than a production GPU sparse-attention kernel benchmark. The GPT is deliberately small, so the quality results should not be generalized to large language models. The sparse implementations are also not equivalent to a highly optimized library kernel: Python/PyTorch indexing overhead can dominate at smaller sequence lengths.
-
-The point of the project was therefore to make the tradeoff visible and measurable from first principles rather than to claim a universal speedup for sparse attention.
